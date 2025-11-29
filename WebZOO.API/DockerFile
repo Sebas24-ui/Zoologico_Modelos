@@ -17,7 +17,7 @@ COPY ["Zoologico_Modelos/Zoologico_Modelos.csproj", "Zoologico_Modelos/"]
 RUN dotnet restore "./WebZOO.API/WebZOO.API.csproj"
 COPY . .
 WORKDIR "/src/WebZOO.API"
-RUN dotnet build "./WebZOO.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./WebZOO.API.csproj" -c $BUILD_CONFIGURATION -o /app/build 
 
 # Esta fase se usa para publicar el proyecto de servicio que se copiará en la fase final.
 FROM build AS publish
