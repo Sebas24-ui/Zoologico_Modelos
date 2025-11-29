@@ -24,8 +24,8 @@ namespace WebZOO.API.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Razas",
-                columns: table => new
+                name: "Razas", 
+                columns: table => new 
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
