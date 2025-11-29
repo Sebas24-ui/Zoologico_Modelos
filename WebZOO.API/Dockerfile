@@ -1,18 +1,23 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-WORKDIR /app
-EXPOSE 10000
-
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["WebZOO.API.csproj", "./"]
-RUN dotnet restore "WebZOO.API.csproj"
+
+# **CRUCIAL:** Copia TODOS los archivos y carpetas del repositorio a /src
+# (Esto asegura que ambos proyectos .csproj sean visibles para dotnet restore)
 COPY . .
-RUN dotnet build "WebZOO.API.csproj" -c Release -o /app/build
 
-FROM build AS publish
-RUN dotnet publish "WebZOO.API.csproj" -c Release -o /app/publish
+# Restaura las dependencias de toda la solución
+# El comando busca el proyecto principal y sus dependencias (Zoologico_Modelos)
+RUN dotnet restore "WebZOO.API/WebZOO.API.csproj"
 
-FROM base AS final
+# Publica el proyecto principal
+RUN dotnet publish "WebZOO.API/WebZOO.API.csproj" -c Release -o /app/publish --no-restore
+
+# -----------------------------------------------------------
+# ETAPA 2: FINAL (Ejecución)
+# -----------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
+
+EXPOSE 8080
 ENTRYPOINT ["dotnet", "WebZOO.API.dll"]
