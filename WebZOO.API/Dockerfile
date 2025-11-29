@@ -1,31 +1,37 @@
-# Consulte https://aka.ms/customizecontainer para aprender a personalizar su contenedor de depuración y cómo Visual Studio usa este Dockerfile para compilar sus imágenes para una depuración más rápida.
-
-# Esta fase se usa cuando se ejecuta desde VS en modo rápido (valor predeterminado para la configuración de depuración)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
-
-# Esta fase se usa para compilar el proyecto de servicio
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["WebZOO.API/WebZOO.API.csproj", "WebZOO.API/"]
-COPY ["Zoologico_Modelos/Zoologico_Modelos.csproj", "Zoologico_Modelos/"]
-RUN dotnet restore "./WebZOO.API/WebZOO.API.csproj"
-COPY . .
-WORKDIR "/src/WebZOO.API"
-RUN dotnet build "./WebZOO.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Esta fase se usa para publicar el proyecto de servicio que se copiará en la fase final.
+# Copia TODOS los archivos y carpetas del repositorio a /src
+# Esto es CRUCIAL para que 'dotnet restore' encuentre AMBOS proyectos
+COPY . .
+
+# Restaura las dependencias de toda la solución.
+# El comando busca el proyecto principal (WebZOO.API.csproj) y sus dependencias (Zoologico_Modelos)
+RUN dotnet restore "./WebZOO.API/WebZOO.API.csproj"
+
+# Construye el proyecto principal
+WORKDIR "/src/WebZOO.API"
+RUN dotnet build "./WebZOO.API.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
+
+# -----------------------------------------------------------
+# ETAPA 2: PUBLICAR
+# -----------------------------------------------------------
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
+WORKDIR "/src/WebZOO.API"
 RUN dotnet publish "./WebZOO.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Esta fase se usa en producción o cuando se ejecuta desde VS en modo normal (valor predeterminado cuando no se usa la configuración de depuración)
-FROM base AS final 
+# -----------------------------------------------------------
+# ETAPA 3: FINAL (Ejecución)
+# -----------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Puertos
+EXPOSE 8080 
+EXPOSE 8081
+
+# Punto de entrada de la aplicación
 ENTRYPOINT ["dotnet", "WebZOO.API.dll"]
